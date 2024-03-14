@@ -32,12 +32,12 @@ static rtimer_clock_t waitDuration = RTIMER_SECOND * 2;
 // Function Declaration
 static void initOptSensor(void);
 static int getLuxReading(void);
-static int checkForLuxChange();
+static int isLuxChangeSignificant();
 static void printOldAndNewLuxReading(int oldLuxReading, int newLuxReading);
 
 static void initMpuSensor(void);
 static void getMpuReading(int mpuReading[]);
-static int checkForMpuChange();
+static int isMpuChangeSignificant();
 static void printMpuReading(int reading);
 static void printOldAndNewMpuReading(int oldMpuReading[], int newMpuReading[]);
 
@@ -119,7 +119,7 @@ static void printOldAndNewMpuReading(int oldMpuReading[], int newMpuReading[])
   printf(" g\n");
 }
 
-static int checkForMpuChange()
+static int isMpuChangeSignificant()
 {
   int prevMpuReading[6];
   for (int i = 0; i < 6; i++)
@@ -173,7 +173,7 @@ static int getLuxReading(void)
   return value;
 }
 
-static int checkForLuxChange()
+static int isLuxChangeSignificant()
 {
   int prevLuxReading = luxReading;
   luxReading = getLuxReading();
@@ -239,11 +239,12 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
   switch (state)
   {
   case 0:
+    // Initial state: IDLE
     rtimerCounter = 3;
     rtimer_set(&rtimerTimer, currentTime + sampleIntervalDuration, 0, rtimerTimeout, NULL);
 
-    if (checkForMpuChange() || checkForLuxChange())
-    { // if significant change in lux or mpu
+    if (isMpuChangeSignificant() || isLuxChangeSignificant())
+    { 
       transitToBuzzState();
     }
 
@@ -258,6 +259,7 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
     break;
 
   case 1:
+    // BUZZ state: start buzzer for 2 seconds
     buzzer_start(buzzerFrequency[rtimerCounter]);                                 // buzz from 4th to 1st note, total 4 notes
     rtimer_set(&rtimerTimer, currentTime + buzzDuration, 0, rtimerTimeout, NULL); // buzz for 2 seconds
     transitToWaitState();
@@ -269,12 +271,13 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
     break;
 
   case 2:
+    // WAIT state: stop buzzer and wait for 2 seconds
     buzzer_stop();
     rtimer_set(&rtimerTimer, currentTime + waitDuration, 0, rtimerTimeout, NULL); // wait for 2 seconds
 
     if (rtimerCounter == 0)
-    { // total 16 seconds
-      // reset lux and mpu readings for idle state
+    { 
+      // after 16 seconds, reset lux and mpu readings for idle state 
       luxReading = getLuxReading();
       getMpuReading(mpuReadings);
       transitToIdleState();
