@@ -281,7 +281,7 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
         // BUZZ state
         // if (isLuxChangeSignificant())
         printf("Num Completed Cycles: %d\n", numCompletedCycles);
-        if (!isLuxChangeSignificant() && numCompletedCycles > 0)
+        if (isLuxChangeSignificant() && numCompletedCycles > 0)
         { // if significant change in lux
             // reset mpu readings for idle state
             getMpuReading(mpuReadings);
