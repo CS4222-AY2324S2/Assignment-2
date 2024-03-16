@@ -313,7 +313,7 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
         // WAIT state
         buzzer_stop();
         rtimer_set(&rtimerTimer, currentTime + waitDuration, 0, rtimerTimeout, NULL); // wait for 4 seconds
-        initOptSensor();  
+        luxReading = getLuxReading();
         
         numCompletedCycles++;
         f = (f + 1) % 8;
