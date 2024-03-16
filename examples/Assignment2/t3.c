@@ -285,7 +285,6 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
         { // if significant change in lux
             // reset mpu readings for idle state
             getMpuReading(mpuReadings);
-            buzzer_stop();
             numCompletedCycles = 0;
             transitToIdleState();
         }
