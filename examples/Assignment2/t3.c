@@ -249,11 +249,10 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
     case 0:
         // IDLE state
         rtimer_set(&rtimerTimer, currentTime + sampleIntervalDuration, 0, rtimerTimeout, NULL);
-
+        luxReading = getLuxReading();
         if (isMpuChangeSignificant())
         { // if significant change in mpu
             // reset lux readings for interim state
-            luxReading = getLuxReading();
             transitToInterimState();
         }
 
