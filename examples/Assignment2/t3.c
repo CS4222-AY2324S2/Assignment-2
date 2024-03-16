@@ -259,6 +259,11 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
         printf("Idle State Duration: ");
         printStateDuration(currentTime);
 
+        if (state == 1)
+        {
+            stateBeginTime = currentTime;
+        }
+
         break;
 
     case 1:
@@ -273,6 +278,11 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
 
         printf("Interim State Duration: ");
         printStateDuration(currentTime);
+        
+        if (state == 2)
+        {
+            stateBeginTime = currentTime;
+        }
 
         break;
 
@@ -286,6 +296,7 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
             getMpuReading(mpuReadings);
             numCompletedCycles = 0;
             transitToIdleState();
+            stateBeginTime = currentTime;
         }
         else
         {
