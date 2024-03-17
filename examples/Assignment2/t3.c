@@ -135,7 +135,7 @@ static int isMpuChangeSignificant()
     // check for significant change in distance
     for (int i = 0; i < 3; i++)
     {
-        if (abs(mpuReadings[i] - prevMpuReading[i]) > 5000)
+        if (abs(mpuReadings[i] - prevMpuReading[i]) > 10000)
         {
             printf("MPU: Significant change in distance\n");
             return 1;
@@ -145,7 +145,7 @@ static int isMpuChangeSignificant()
     // check for significant change in acceleration
     for (int i = 3; i < 6; i++)
     {
-        if (abs(mpuReadings[i] - prevMpuReading[i]) > 1000)
+        if (abs(mpuReadings[i] - prevMpuReading[i]) > 3000)
         {
             printf("MPU: Significant change in acceleration\n");
             return 1;
