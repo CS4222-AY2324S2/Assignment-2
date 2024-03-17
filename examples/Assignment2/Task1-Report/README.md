@@ -1,4 +1,4 @@
-### Task 1: Finding the clock resolution for rtimer and etimer
+## Task 1: Finding the clock resolution for rtimer and etimer
 
 - etimer-buzzer
   - Value of `CLOCK_SECOND`: 421 - 293 = **128**
@@ -15,7 +15,7 @@
 
   - Click [here](https://drive.google.com/file/d/16VtcWkAAA-wgrLYRcDcUefBu6yV0Ftz3/view?usp=sharing) for demo
 
-### Instructions on how to execute our program
+## Instructions on how to execute our program
 
 To execute our program, follows these steps:
 
@@ -35,7 +35,7 @@ To execute our program, follows these steps:
    screen /dev/tty.usbmodemLXXXXXXXX 115200
    ```
 
-### Name and student ID of group members
+## Name and student ID of group members
 
 1. Allard Quek (A0214954B)
 2. Yang Shiyuan (A0214269A)
