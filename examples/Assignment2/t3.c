@@ -248,8 +248,8 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
     {
     case 0:
         // IDLE state
-        rtimer_set(&rtimerTimer, currentTime + sampleIntervalDuration, 0, rtimerTimeout, NULL);
         luxReading = getLuxReading();
+        rtimer_set(&rtimerTimer, currentTime + sampleIntervalDuration, 0, rtimerTimeout, NULL);
         if (isMpuChangeSignificant())
         { // if significant change in mpu
             // reset lux readings for interim state
@@ -313,7 +313,6 @@ void rtimerTimeout(struct rtimer *timer, void *ptr)
         // WAIT state
         buzzer_stop();
         rtimer_set(&rtimerTimer, currentTime + waitDuration, 0, rtimerTimeout, NULL); // wait for 4 seconds
-        luxReading = getLuxReading();
         
         numCompletedCycles++;
         f = (f + 1) % 8;
