@@ -44,12 +44,21 @@ void print_lladdr(const linkaddr_t *addr) {
 void input_callback(const void *data, uint16_t len,
   const linkaddr_t *src, const linkaddr_t *dest) 
 {
+  receiveCount++;
   if(len == sizeof(unsigned)) {
     unsigned count;
     memcpy(&count, data, sizeof(count));
     printf("Received %u with rssi %d from", count, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI));
-    print_lladdr(src);
-    printf("\n");
+    printf(" Current count: %d\n", receiveCount);
+    
+    rssiTotal += (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI);
+    int avgRssi = rssiTotal / receiveCount;
+    printf("Average RSSI: %d\n", avgRssi);
+    // linkaddr_t addr = *src;
+    // printf("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X\n", 
+    //        addr.u8[0], addr.u8[1], addr.u8[2], addr.u8[3], 
+    //        addr.u8[4], addr.u8[5], addr.u8[6], addr.u8[7]);
+    printf("                       ");
   }
 }
 /*---------------------------------------------------------------------------*/
