@@ -12,13 +12,33 @@
 #define LOG_LEVEL LOG_LEVEL_INFO
 
 /* Configuration */
-#define SEND_INTERVAL (8 * CLOCK_SECOND)
-static linkaddr_t dest_addr =         {{ 0x00, 0x12, 0x4b, 0x00, 0x11, 0xa7, 0x73, 0x87 }}; //replace this with your receiver's link address
+// #define SEND_INTERVAL (8 * CLOCK_SECOND)
+#define SEND_INTERVAL (CLOCK_SECOND / 4) // 1/4 of a second
+#define MAX_COUNT 240 // 60 seconds / 0.25 seconds
+static linkaddr_t dest_addr = {{ 0x00, 0x12, 0x4b, 0x00, 0x0f, 0x0c, 0xe4, 0x06 }}; //replace this with your receiver's link address
+// static linkaddr_t dest_addr = {{ 0x00, 0x12, 0x4b, 0x00, 0x12, 0x05, 0x04, 0x48 }}; //replace this with your receiver's link address
 
 
 /*---------------------------------------------------------------------------*/
 PROCESS(unicast_process, "One to One Communication");
 AUTOSTART_PROCESSES(&unicast_process);
+
+#include <stdio.h>
+#include "net/linkaddr.h"
+
+void print_lladdr(const linkaddr_t *addr) {
+    if(addr == NULL) {
+        printf("NULL");
+    } else {
+        for(unsigned i = 0; i < LINKADDR_SIZE; i++) {
+            if(i > 0) {
+                printf(":");
+            }
+            printf("%02x", addr->u8[i]);
+        }
+    }
+    printf("\n");
+}
 
 /*---------Callback executed immediately after reception---------*/
 void input_callback(const void *data, uint16_t len,
@@ -27,20 +47,19 @@ void input_callback(const void *data, uint16_t len,
   if(len == sizeof(unsigned)) {
     unsigned count;
     memcpy(&count, data, sizeof(count));
-    LOG_INFO("Received %u with rssi %d from", count, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI));
-    LOG_INFO_LLADDR(src);
-    LOG_INFO_("\n");
+    printf("Received %u with rssi %d from", count, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI));
+    print_lladdr(src);
+    printf("\n");
   }
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(unicast_process, ev, data)
 {
   static struct etimer periodic_timer;
-  static unsigned count = 0;
+  static unsigned count = 1;
+  static unsigned send_count = 0; // counter for sent packets
 
   PROCESS_BEGIN();
-
-
 
   /* Initialize NullNet */
   nullnet_buf = (uint8_t *)&count; //data transmitted
@@ -48,19 +67,20 @@ PROCESS_THREAD(unicast_process, ev, data)
   nullnet_set_input_callback(input_callback); //initialize receiver callback
 
   if(!linkaddr_cmp(&dest_addr, &linkaddr_node_addr)) { //ensures destination is not same as sender
+    printf("UNICAST starting\n");
     etimer_set(&periodic_timer, SEND_INTERVAL);
-    while(1) {
+    // while(1) {
+    while(send_count < MAX_COUNT) {
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
-      LOG_INFO("Sending %u to ", count);
-      LOG_INFO_LLADDR(&dest_addr);
-      LOG_INFO_("\n");
-
+      printf("Sending %u to ", count);
+      print_lladdr(&dest_addr);
+      printf("\n");
       NETSTACK_NETWORK.output(&dest_addr); //Packet transmission
       count++;
+      send_count++;
       etimer_reset(&periodic_timer);
     }
   }
-
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
