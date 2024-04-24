@@ -16,7 +16,7 @@
 // Identification information of the node
 
 // Configures the wake-up timer for neighbour discovery
-#define WAKE_TIME RTIMER_SECOND / 5 // 5 HZ, 0.2s
+#define WAKE_TIME RTIMER_SECOND / 10 // 10 HZ, 0.1s
 
 #define SLEEP_CYCLE 5                 // 0 for never sleep
 #define SLEEP_SLOT RTIMER_SECOND / 10 // sleep slot should not be too large to prevent overflow
