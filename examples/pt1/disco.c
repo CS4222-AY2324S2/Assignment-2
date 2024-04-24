@@ -15,11 +15,7 @@
 
 // Identification information of the node
 
-// Configures the wake-up timer for neighbour discovery
-#define WAKE_TIME RTIMER_SECOND / 10 // 10 HZ, 0.1s
-
-// #define SLEEP_CYCLE 9                 // 0 for never sleep
-#define SLEEP_SLOT RTIMER_SECOND / 10 // sleep slot should not be too large to prevent overflow
+#define TIME_SLOT RTIMER_SECOND / 10 // divide time into equal slots
 
 // first prime number
 #define PRIME_ONE 2
@@ -40,9 +36,6 @@ typedef struct
 
 } data_packet_struct;
 
-/*---------------------------------------------------------------------------*/
-// duty cycle = WAKE_TIME / (WAKE_TIME + SLEEP_SLOT * SLEEP_CYCLE)
-/*---------------------------------------------------------------------------*/
 // sender timer implemented using rtimer
 static struct rtimer rt;
 
@@ -134,11 +127,10 @@ char sender_scheduler(struct rtimer *t, void *ptr)
 
       NETSTACK_NETWORK.output(&dest_addr); // Packet transmission
 
-      // wait for WAKE_TIME before sending the next packet
       if (i != (NUM_SEND - 1))
       {
 
-        rtimer_set(t, RTIMER_TIME(t) + WAKE_TIME, 1, (rtimer_callback_t)sender_scheduler, ptr);
+        rtimer_set(t, RTIMER_TIME(t) + TIME_SLOT, 1, (rtimer_callback_t)sender_scheduler, ptr);
         PT_YIELD(&pt);
       }
     }
@@ -161,7 +153,7 @@ char sender_scheduler(struct rtimer *t, void *ptr)
     // NumSleep should be a constant or static int
     for (i = 0; i < NumSleep; i++)
     {
-      rtimer_set(t, RTIMER_TIME(t) + SLEEP_SLOT, 1, (rtimer_callback_t)sender_scheduler, ptr);
+      rtimer_set(t, RTIMER_TIME(t) + TIME_SLOT, 1, (rtimer_callback_t)sender_scheduler, ptr);
       PT_YIELD(&pt);
     }
   }
