@@ -85,7 +85,6 @@ static struct pt pt;
 // Structure holding the data to be transmitted or received
 static data_packet_struct data_packet;
 static light_sensor_packet_struct light_sensor_packet;
-static request_packet_struct request_packet;
 static light_sensor_readings_packet_struct light_sensor_readings_packet;
 
 // Current time stamp of the node
@@ -121,18 +120,15 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     // Print the details of the received packet
     printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI),received_packet_data.src_id);
     printf("\n");
-  }
-  else if (len == sizeof(request_packet))
-  {
-    static request_packet_struct received_packet_data;
 
-    // Copy the content of packet into the data structure
-    memcpy(&received_packet_data, data, len);
+    // Check if link quality is good based on RSSI
+    if(packetbuf_attr(PACKETBUF_ATTR_RSSI) < -50){
+      printf("NODE A: Link quality is bad\n");
+      return;
+    }
 
+    printf("NODE A: Link quality is good\n");
     unsigned long curr_time = clock_time();
-
-    // Print the details of the received packet
-    printf("Received Light Sensor Reading Request Packet with rssi %d from Relay Node %ld\n", (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
 
     // Initialize the nullnet module with information of packet to be trasnmitted
     nullnet_buf = (uint8_t *)&light_sensor_readings_packet; // data transmitted
@@ -154,7 +150,6 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     current_index = 0;
     memset(light_sensor_readings, 0, sizeof(light_sensor_readings));
   }
-
   else
   {
     printf("NODE A: Unknown data packet received\n");
@@ -165,7 +160,6 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
 char sender_scheduler(struct rtimer *t, void *ptr) {
  
   static uint16_t i = 0;
-  
   static int NumSleep=0;
  
   // Begin the protothread
@@ -179,7 +173,6 @@ char sender_scheduler(struct rtimer *t, void *ptr) {
   ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
 
   while (1){
-
     // radio on
     NETSTACK_RADIO.on();
 
@@ -190,16 +183,13 @@ char sender_scheduler(struct rtimer *t, void *ptr) {
       nullnet_len = sizeof(light_sensor_packet); //length of data transmitted
       
       light_sensor_packet.seq++;
-      
-      curr_timestamp = clock_time();
-      
       light_sensor_packet.timestamp = curr_timestamp;
+      curr_timestamp = clock_time();
 
       printf("Send seq# %lu  @ %8lu ticks   %3lu.%03lu\n", light_sensor_packet.seq, curr_timestamp, curr_timestamp / CLOCK_SECOND, ((curr_timestamp % CLOCK_SECOND)*1000) / CLOCK_SECOND);
 
       NETSTACK_NETWORK.output(&dest_addr); //Packet transmission
       
-
       // wait for WAKE_TIME before sending the next packet
       if(i != (NUM_SEND - 1)){
 
@@ -207,7 +197,6 @@ char sender_scheduler(struct rtimer *t, void *ptr) {
         PT_YIELD(&pt);
       
       }
-   
     }
 
     // sleep for a random number of slots
