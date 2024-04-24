@@ -21,6 +21,12 @@
 // #define SLEEP_CYCLE 9                 // 0 for never sleep
 #define SLEEP_SLOT RTIMER_SECOND / 10 // sleep slot should not be too large to prevent overflow
 
+// first prime number
+#define PRIME_ONE 2
+
+// second prime number
+#define PRIME_TWO 3
+
 // For neighbour discovery, we would like to send message to everyone. We use Broadcast address:
 linkaddr_t dest_addr;
 
@@ -49,6 +55,9 @@ static data_packet_struct data_packet;
 // Current time stamp of the node
 unsigned long curr_timestamp;
 
+// Received time stamp from other node
+unsigned long recv_timestamp;
+
 // sleep cycle
 int sleep_cycle = 2;
 
@@ -74,7 +83,11 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     // printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
 
     curr_timestamp = clock_time();
-    printf("Received at %3lu.%03lu\n", curr_timestamp / CLOCK_SECOND,
+    recv_timestamp = received_packet_data.timestamp;
+    printf("Received timestamp: %3lu.%03lu | Own timestamp: %3lu.%03lu\n",
+           recv_timestamp / CLOCK_SECOND,
+           ((recv_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND,
+           curr_timestamp / CLOCK_SECOND,
            ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
     printf("---------------- ");
   }
@@ -135,13 +148,13 @@ char sender_scheduler(struct rtimer *t, void *ptr)
 
     // DISCO version 1 with prime numbers 2 and 3
     NumSleep = sleep_cycle;
-    if (sleep_cycle == 2)
+    if (sleep_cycle == PRIME_ONE)
     {
-      sleep_cycle = 3;
+      sleep_cycle = PRIME_TWO;
     }
     else
     {
-      sleep_cycle = 2;
+      sleep_cycle = PRIME_ONE;
     }
     // printf(" Sleep for %d slots \n", NumSleep);
 
