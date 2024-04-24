@@ -121,12 +121,12 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI),received_packet_data.src_id);
     printf("\n");
 
-    // Check if link quality is good based on RSSI
     if(packetbuf_attr(PACKETBUF_ATTR_RSSI) < -50){
       printf("NODE A: Link quality is bad\n");
       return;
     }
 
+    // Send light readings if link quality is good
     printf("NODE A: Link quality is good\n");
     unsigned long curr_time = clock_time();
 
@@ -139,6 +139,17 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     for (int j = 0; j < MAX_READINGS; j++)
     {
       light_sensor_readings_packet.light_sensor_readings[j] = light_sensor_readings[j];
+    }
+
+    // Print all light sensor readings
+    printf("Light: ");
+    for (int j = 0; j < MAX_READINGS; j++)
+    {
+      printf("%d", light_sensor_readings_packet.light_sensor_readings[j]);
+      if (j != MAX_READINGS - 1)
+      {
+        printf(", ");
+      }
     }
 
     printf("Sending Light Sensor Data\n");
@@ -276,14 +287,11 @@ get_light_reading()
 // Main thread that handles the neighbour discovery process
 PROCESS_THREAD(nbr_discovery_process, ev, data)
 {
- // static struct etimer periodic_timer;
- // static struct etimer periodic_timer;
-
   // static struct etimer periodic_timer;
 
   PROCESS_BEGIN();
 
-    // initialize data packet sent for neighbour discovery exchange
+  // initialize data packet sent for neighbour discovery exchange
   light_sensor_packet.src_id = node_id; //Initialize the node ID
   light_sensor_packet.seq = 0; //Initialize the sequence number of the packet
   // light_sensor_packet.light_sensor = 1; // Inform receivers Light Sensor Node discovered

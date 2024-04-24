@@ -71,7 +71,6 @@ static struct pt pt;
 // Structure holding the data to be transmitted or received
 static data_packet_struct data_packet;
 static light_sensor_packet_struct light_sensor_packet;
-// static request_packet_struct request_packet;
 static light_sensor_readings_packet_struct light_sensor_readings_packet;
 
 static volatile node light_sensor_node; // Detect 1 light sensor sender
@@ -96,7 +95,6 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     
     // Copy the content of packet into the data structure
     memcpy(&received_packet_data, data, len);
-    
 
     // Print the details of the received packet
     printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI),received_packet_data.src_id);
