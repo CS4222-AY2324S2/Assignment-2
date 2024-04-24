@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = nbr_a_setting4 nbr_b_setting4
+CONTIKI_PROJECT = disco_a_default disco_b_default
 all: $(CONTIKI_PROJECT)
 
 CONTIKI = ../..
