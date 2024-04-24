@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = nbr
+CONTIKI_PROJECT = nbr_a nbr_b
 all: $(CONTIKI_PROJECT)
 
 CONTIKI = ../..
