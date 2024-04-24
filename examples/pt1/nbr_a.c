@@ -69,7 +69,7 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     memcpy(&received_packet_data, data, len);
 
     // Print the details of the received packet
-    printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
+    // printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
 
     curr_timestamp = clock_time();
     printf("Received at %3lu.%03lu\n", curr_timestamp / CLOCK_SECOND,
@@ -92,8 +92,8 @@ char sender_scheduler(struct rtimer *t, void *ptr)
   // Get the current time stamp
   curr_timestamp = clock_time();
 
-  printf("Start clock %lu ticks, timestamp %3lu.%03lu\n", curr_timestamp, curr_timestamp / CLOCK_SECOND,
-         ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
+  // printf("Start clock %lu ticks, timestamp %3lu.%03lu\n", curr_timestamp, curr_timestamp / CLOCK_SECOND,
+  //        ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
 
   while (1)
   {
@@ -115,7 +115,7 @@ char sender_scheduler(struct rtimer *t, void *ptr)
 
       data_packet.timestamp = curr_timestamp;
 
-      printf("Send seq# %lu  @ %8lu ticks   %3lu.%03lu\n", data_packet.seq, curr_timestamp, curr_timestamp / CLOCK_SECOND, ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
+      // printf("Send seq# %lu  @ %8lu ticks   %3lu.%03lu\n", data_packet.seq, curr_timestamp, curr_timestamp / CLOCK_SECOND, ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
 
       NETSTACK_NETWORK.output(&dest_addr); // Packet transmission
 
@@ -141,7 +141,7 @@ char sender_scheduler(struct rtimer *t, void *ptr)
       // get a value that is uniformly distributed between 0 and 2*SLEEP_CYCLE
       // the average is SLEEP_CYCLE
       NumSleep = random_rand() % (2 * SLEEP_CYCLE + 1);
-      printf(" Sleep for %d slots \n", NumSleep);
+      // printf(" Sleep for %d slots \n", NumSleep);
 
       // NumSleep should be a constant or static int
       for (i = 0; i < NumSleep; i++)
