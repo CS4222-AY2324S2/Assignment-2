@@ -120,19 +120,16 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     
     // Print the details of the received packet
     printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI),received_packet_data.src_id);
-   
     printf("\n");
   }
-
   else if (len == sizeof(request_packet))
   {
-
     static request_packet_struct received_packet_data;
 
     // Copy the content of packet into the data structure
     memcpy(&received_packet_data, data, len);
 
-    // unsigned long curr_time = clock_time();
+    unsigned long curr_time = clock_time();
 
     // Print the details of the received packet
     printf("Received Light Sensor Reading Request Packet with rssi %d from Relay Node %ld\n", (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
@@ -141,7 +138,7 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     nullnet_buf = (uint8_t *)&light_sensor_readings_packet; // data transmitted
     nullnet_len = sizeof(light_sensor_readings_packet);     // length of data transmitted
 
-    light_sensor_readings_packet.src_id = node_id;
+    light_sensor_readings_packet.src_id = received_packet_data.src_id;
     light_sensor_readings_packet.timestamp = clock_time();
     for (int j = 0; j < MAX_READINGS; j++)
     {
@@ -149,28 +146,18 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     }
 
     printf("Sending Light Sensor Data\n");
-
-    // Print all 60 light readings in this format: "Light: Reading 1, Reading 2, ..., Reading 10”
-    printf("Light: ");
-    for (int j = 0; j < MAX_READINGS; j++)
-    {
-      printf("%d", light_sensor_readings[j]);
-      if (j != MAX_READINGS - 1)
-      {
-        printf(", ");
-      }
-    }
-    
-    // Reset light readings array
-    current_index = 0;
-    memset(light_sensor_readings, 0, sizeof(light_sensor_readings));
+    printf("%lu NODE A: TRANSFER %lu\n", curr_time / CLOCK_SECOND, received_packet_data.src_id);
 
     NETSTACK_NETWORK.output(src); // Only send to node that requested
+    
+    // Reset light readings array after sending to Node B
+    current_index = 0;
+    memset(light_sensor_readings, 0, sizeof(light_sensor_readings));
   }
 
   else
   {
-    // printf("Unknown Data Packet Received\n");
+    printf("NODE A: Unknown data packet received\n");
   }
 }
 
@@ -189,18 +176,15 @@ char sender_scheduler(struct rtimer *t, void *ptr) {
 
   // Replace %d with %lu to print unsigned long
   printf("Start clock %lu ticks, timestamp %3lu.%03lu\n", curr_timestamp, curr_timestamp / CLOCK_SECOND, 
-  ((curr_timestamp % CLOCK_SECOND)*1000) / CLOCK_SECOND);
+  ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
 
-  while(1){
+  while (1){
 
     // radio on
     NETSTACK_RADIO.on();
 
     // send NUM_SEND number of neighbour discovery beacon packets
     for(i = 0; i < NUM_SEND; i++){
-
-      
-     
        // Initialize the nullnet module with information of packet to be trasnmitted
       nullnet_buf = (uint8_t *)&light_sensor_packet; //data transmitted
       nullnet_len = sizeof(light_sensor_packet); //length of data transmitted
@@ -303,8 +287,10 @@ get_light_reading()
 // Main thread that handles the neighbour discovery process
 PROCESS_THREAD(nbr_discovery_process, ev, data)
 {
-
  // static struct etimer periodic_timer;
+ // static struct etimer periodic_timer;
+
+  // static struct etimer periodic_timer;
 
   PROCESS_BEGIN();
 
@@ -312,6 +298,8 @@ PROCESS_THREAD(nbr_discovery_process, ev, data)
   light_sensor_packet.src_id = node_id; //Initialize the node ID
   light_sensor_packet.seq = 0; //Initialize the sequence number of the packet
   // light_sensor_packet.light_sensor = 1; // Inform receivers Light Sensor Node discovered
+
+  light_sensor_readings_packet.src_id = node_id;
   
   nullnet_set_input_callback(receive_packet_callback); //initialize receiver callback
   linkaddr_copy(&dest_addr, &linkaddr_null);
