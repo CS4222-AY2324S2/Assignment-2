@@ -33,12 +33,11 @@ linkaddr_t dest_addr;
 
 #define NUM_SEND 2
 /*---------------------------------------------------------------------------*/
-typedef struct {
-  unsigned long src_id;
-  unsigned long timestamp;
-  unsigned long seq;
-  
-} data_packet_struct;
+// typedef struct {
+//   unsigned long src_id;
+//   unsigned long timestamp;
+//   unsigned long seq;
+// } data_packet_struct;
 
 typedef struct
 {
@@ -46,7 +45,6 @@ typedef struct
   unsigned long timestamp;
   unsigned long seq;
   int light_sensor;
-
 } light_sensor_packet_struct;
 
 typedef struct
@@ -69,7 +67,6 @@ typedef struct
   unsigned long src_id;
   unsigned long timestamp;
   int light_sensor_readings[MAX_READINGS];
-
 } light_sensor_readings_packet_struct;
 
 /*---------------------------------------------------------------------------*/
@@ -78,12 +75,13 @@ typedef struct
 
 // sender timer implemented using rtimer
 static struct rtimer rt;
+static struct etimer timer_etimer;
 
 // Protothread variable
 static struct pt pt;
 
 // Structure holding the data to be transmitted or received
-static data_packet_struct data_packet;
+// static data_packet_struct data_packet;
 static light_sensor_packet_struct light_sensor_packet;
 static light_sensor_readings_packet_struct light_sensor_readings_packet;
 
@@ -110,9 +108,13 @@ AUTOSTART_PROCESSES(&nbr_discovery_process, &light_sensor_process);
 // Function called after reception of a packet
 void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *src, const linkaddr_t *dest) 
 {
+  printf("SIZE OF LEN: %u\n", len);
+  printf("SIZE OF READINGS PACKET: %u\n", sizeof(light_sensor_readings_packet));
+  printf("SIZE OF DISCOVERY PACKET: %u\n", sizeof(light_sensor_packet));
+
   // Check if the received packet size matches with what we expect it to be
-  if (len == sizeof(data_packet)) {
-    static data_packet_struct received_packet_data;
+  if (len == sizeof(light_sensor_packet)) {
+    static light_sensor_packet_struct received_packet_data;
     
     // Copy the content of packet into the data structure
     memcpy(&received_packet_data, data, len);
@@ -134,7 +136,8 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     nullnet_buf = (uint8_t *)&light_sensor_readings_packet; // data transmitted
     nullnet_len = sizeof(light_sensor_readings_packet);     // length of data transmitted
 
-    light_sensor_readings_packet.src_id = received_packet_data.src_id;
+    // light_sensor_readings_packet.src_id = received_packet_data.src_id;
+    light_sensor_readings_packet.src_id = node_id;
     light_sensor_readings_packet.timestamp = clock_time();
     for (int j = 0; j < MAX_READINGS; j++)
     {
@@ -153,9 +156,8 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     }
 
     printf("Sending Light Sensor Data\n");
-    printf("%lu NODE A: TRANSFER %lu\n", curr_time / CLOCK_SECOND, received_packet_data.src_id);
-
     NETSTACK_NETWORK.output(src); // Only send to node that requested
+    printf("%lu NODE A: TRANSFER %lu\n", curr_time / CLOCK_SECOND, received_packet_data.src_id);
     
     // Reset light readings array after sending to Node B
     current_index = 0;
@@ -302,7 +304,7 @@ PROCESS_THREAD(nbr_discovery_process, ev, data)
   linkaddr_copy(&dest_addr, &linkaddr_null);
 
   printf("CC2650 neighbour discovery\n");
-  printf("Node %d will be sending packet of size %d Bytes\n", node_id, (int)sizeof(data_packet_struct));
+  printf("Node %d will be sending packet of size %d Bytes\n", node_id, (int)sizeof(light_sensor_packet));
 
   // Start sender in one millisecond.
   rtimer_set(&rt, RTIMER_NOW() + (RTIMER_SECOND / 1000), 1, (rtimer_callback_t)sender_scheduler, NULL);
@@ -319,9 +321,15 @@ PROCESS_THREAD(light_sensor_process, ev, data)
   printf(" The value of RTIMER_SECOND is %d \n",RTIMER_SECOND);
   printf(" The value of timeout_rtimer is %lu \n",timeout_rtimer);
 
-  while(seconds_elapsed < MAX_READINGS) {  // Run for 60 seconds
-    rtimer_set(&timer_rtimer, RTIMER_NOW() + timeout_rtimer, 0,  do_rtimer_timeout, NULL);
-    PROCESS_YIELD();
+  while (seconds_elapsed < MAX_READINGS)
+  {
+    printf("Seconds Elapsed: %d\n", seconds_elapsed);
+
+    // Sample every 5 seconds
+    etimer_set(&timer_etimer, CLOCK_SECOND * 5); 
+
+    PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
+    get_light_reading();
     seconds_elapsed++; 
   }
 

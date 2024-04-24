@@ -47,15 +47,14 @@ typedef struct
   unsigned long timestamp;
   unsigned long seq;
   int light_sensor;
-
 } light_sensor_packet_struct;
+
 
 typedef struct
 {
   unsigned long src_id;
   unsigned long timestamp;
   int light_sensor_readings[MAX_READINGS];
-
 } light_sensor_readings_packet_struct;
 
 /*---------------------------------------------------------------------------*/
@@ -69,7 +68,7 @@ static struct rtimer rt;
 static struct pt pt;
 
 // Structure holding the data to be transmitted or received
-static data_packet_struct data_packet;
+// static data_packet_struct data_packet;
 static light_sensor_packet_struct light_sensor_packet;
 static light_sensor_readings_packet_struct light_sensor_readings_packet;
 
@@ -83,10 +82,13 @@ PROCESS(nbr_discovery_process, "cc2650 neighbour discovery process");
 AUTOSTART_PROCESSES(&nbr_discovery_process);
 
 // Function called after reception of a packet
-void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *src, const linkaddr_t *dest) 
+
 {
   // Print DETECT when receiving any packet
   printf("%lu DETECT %lu\n", light_sensor_node.time_detected / CLOCK_SECOND, light_sensor_node.node_id);
+  printf("SIZE OF LEN: %u\n", len);
+  printf("SIZE OF READINGS PACKET: %u\n", sizeof(light_sensor_readings_packet));
+  printf("SIZE OF DISCOVERY: %u\n", sizeof(light_sensor_packet));
 
   // Check if the received packet size matches with what we expect it to be
   if (len == sizeof(light_sensor_packet)) {
@@ -169,14 +171,14 @@ char sender_scheduler(struct rtimer *t, void *ptr) {
     // send NUM_SEND number of neighbour discovery beacon packets
     for(i = 0; i < NUM_SEND; i++){
        // Initialize the nullnet module with information of packet to be trasnmitted
-      nullnet_buf = (uint8_t *)&data_packet; // data transmitted
-      nullnet_len = sizeof(data_packet); // length of data transmitted
+      nullnet_buf = (uint8_t *)&light_sensor_packet; // data transmitted
+      nullnet_len = sizeof(light_sensor_packet); // length of data transmitted
       
-      data_packet.seq++;
+      light_sensor_packet.seq++;
       curr_timestamp = clock_time();
-      data_packet.timestamp = curr_timestamp;
+      light_sensor_packet.timestamp = curr_timestamp;
 
-      printf("Send seq# %lu  @ %8lu ticks   %3lu.%03lu\n", data_packet.seq, curr_timestamp, curr_timestamp / CLOCK_SECOND, ((curr_timestamp % CLOCK_SECOND)*1000) / CLOCK_SECOND);
+      printf("Send seq# %lu  @ %8lu ticks   %3lu.%03lu\n", light_sensor_packet.seq, curr_timestamp, curr_timestamp / CLOCK_SECOND, ((curr_timestamp % CLOCK_SECOND)*1000) / CLOCK_SECOND);
       NETSTACK_NETWORK.output(&dest_addr); //Packet transmission
       
       // wait for WAKE_TIME before sending the next packet
@@ -218,8 +220,8 @@ PROCESS_THREAD(nbr_discovery_process, ev, data)
   PROCESS_BEGIN();
 
   // initialize data packet sent for neighbour discovery exchange
-  data_packet.src_id = node_id; //Initialize the node ID
-  data_packet.seq = 0; //Initialize the sequence number of the packet
+  light_sensor_packet.src_id = node_id; //Initialize the node ID
+  light_sensor_packet.seq = 0; //Initialize the sequence number of the packet
   
   nullnet_set_input_callback(receive_packet_callback); //initialize receiver callback
   linkaddr_copy(&dest_addr, &linkaddr_null);
