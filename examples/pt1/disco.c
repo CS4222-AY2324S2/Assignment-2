@@ -52,7 +52,7 @@ unsigned long curr_timestamp;
 unsigned long recv_timestamp;
 
 // sleep cycle
-int sleep_cycle = 2;
+int sleep_cycle = PRIME_ONE;
 
 // Starts the main contiki neighbour discovery process
 PROCESS(nbr_discovery_process, "cc2650 neighbour discovery process");
