@@ -94,7 +94,7 @@ int light_sensor_readings[MAX_READINGS];
 int current_index = 0;
 int seconds_elapsed = 0;
 
-int sleep_cycle = 3; // to be varied between the two chosen prime numbers
+int sleep_cycle = PRIME_ONE; // to be varied between the two chosen prime numbers
 
 /*---------------------------------------------------------------------------*/
 static void
