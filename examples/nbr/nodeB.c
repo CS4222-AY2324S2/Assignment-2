@@ -17,6 +17,7 @@ typedef struct {
   unsigned long src_id;
   unsigned long timestamp;
   int light_value; 
+  int pad;
 } light_sensor_reading_struct;
 
 // Constants
@@ -32,6 +33,9 @@ AUTOSTART_PROCESSES(&nbr_discovery_process);
 
 // Callback Function
 void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *src, const linkaddr_t *dest) {
+  printf("Node B: Received packet of length %u\n", len);
+  printf("Size of discovery_packet_struct: %u\n", sizeof(discovery_packet_struct));
+  printf("Size of light_sensor_reading_struct: %u\n", sizeof(light_sensor_reading_struct));
   if (len == sizeof(discovery_packet_struct)) {
      printf("Node B: Received discovery packet from Node %lu\n", ((discovery_packet_struct *)data)->src_id);  
    } else if (len == sizeof(light_sensor_reading_struct)) {
