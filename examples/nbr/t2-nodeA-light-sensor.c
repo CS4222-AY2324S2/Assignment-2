@@ -95,6 +95,7 @@ static rtimer_clock_t timeout_rtimer = RTIMER_SECOND;
 int light_sensor_readings[MAX_READINGS];
 int current_index = 0;
 int seconds_elapsed = 0;
+bool is_neighbour_discovery = true;
 
 /*---------------------------------------------------------------------------*/
 static void init_opt_reading(void);
@@ -108,7 +109,7 @@ AUTOSTART_PROCESSES(&nbr_discovery_process, &light_sensor_process);
 // Function called after reception of a packet
 void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *src, const linkaddr_t *dest) 
 {
-  printf("SIZE OF LEN: %u\n", len);
+  printf("SIZE OF LEN: %u\n", (unsigned int) len);
   printf("SIZE OF READINGS PACKET: %u\n", sizeof(light_sensor_readings_packet));
   printf("SIZE OF DISCOVERY PACKET: %u\n", sizeof(light_sensor_packet));
 
@@ -130,6 +131,7 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
 
     // Send light readings if link quality is good
     printf("NODE A: Link quality is good\n");
+    is_neighbour_discovery = false;
     unsigned long curr_time = clock_time();
 
     // Initialize the nullnet module with information of packet to be trasnmitted
@@ -156,12 +158,16 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     }
 
     printf("Sending Light Sensor Data\n");
+    printf("Size of packet AT NODE A: %u\n", sizeof(light_sensor_readings_packet));
+    printf("Size of NULLNET AT NODE A: %u\n", nullnet_len);
+
     NETSTACK_NETWORK.output(src); // Only send to node that requested
     printf("%lu NODE A: TRANSFER %lu\n", curr_time / CLOCK_SECOND, received_packet_data.src_id);
     
     // Reset light readings array after sending to Node B
     current_index = 0;
     memset(light_sensor_readings, 0, sizeof(light_sensor_readings));
+    is_neighbour_discovery = true;
   }
   else
   {
@@ -199,16 +205,19 @@ char sender_scheduler(struct rtimer *t, void *ptr) {
       light_sensor_packet.timestamp = curr_timestamp;
       curr_timestamp = clock_time();
 
+      if (!is_neighbour_discovery)
+      {
+        continue;
+      }
+
       printf("Send seq# %lu  @ %8lu ticks   %3lu.%03lu\n", light_sensor_packet.seq, curr_timestamp, curr_timestamp / CLOCK_SECOND, ((curr_timestamp % CLOCK_SECOND)*1000) / CLOCK_SECOND);
 
       NETSTACK_NETWORK.output(&dest_addr); //Packet transmission
       
       // wait for WAKE_TIME before sending the next packet
       if(i != (NUM_SEND - 1)){
-
         rtimer_set(t, RTIMER_TIME(t) + WAKE_TIME, 1, (rtimer_callback_t)sender_scheduler, ptr);
         PT_YIELD(&pt);
-      
       }
     }
 
@@ -321,7 +330,8 @@ PROCESS_THREAD(light_sensor_process, ev, data)
   printf(" The value of RTIMER_SECOND is %d \n",RTIMER_SECOND);
   printf(" The value of timeout_rtimer is %lu \n",timeout_rtimer);
 
-  while (seconds_elapsed < MAX_READINGS)
+  // while (seconds_elapsed < MAX_READINGS)
+  while (1)
   {
     printf("Seconds Elapsed: %d\n", seconds_elapsed);
 

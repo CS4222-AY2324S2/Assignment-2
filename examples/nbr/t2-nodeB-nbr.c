@@ -82,7 +82,7 @@ PROCESS(nbr_discovery_process, "cc2650 neighbour discovery process");
 AUTOSTART_PROCESSES(&nbr_discovery_process);
 
 // Function called after reception of a packet
-
+void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *src, const linkaddr_t *dest) 
 {
   // Print DETECT when receiving any packet
   printf("%lu DETECT %lu\n", light_sensor_node.time_detected / CLOCK_SECOND, light_sensor_node.node_id);
