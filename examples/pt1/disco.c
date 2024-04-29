@@ -13,15 +13,17 @@
 #include <stdio.h>
 #include "node-id.h"
 
+#include "board-peripherals.h"
+
 // Identification information of the node
 
 #define TIME_SLOT RTIMER_SECOND / 2 // divide time into equal slots, 0.5
 
 // first prime number
-#define PRIME_ONE 3
+#define PRIME_ONE 2
 
 // second prime number
-#define PRIME_TWO 5
+#define PRIME_TWO 3
 
 // For neighbour discovery, we would like to send message to everyone. We use Broadcast address:
 linkaddr_t dest_addr;
@@ -36,14 +38,24 @@ typedef struct
 
 } data_packet_struct;
 
+typedef struct {
+  unsigned long id;
+  unsigned long timestamp;
+  unsigned long seq;
+  int lightReadings[10];
+} light_packet_struct;
+
+
 // sender timer implemented using rtimer
 static struct rtimer rt;
+static struct etimer et;
 
 // Protothread variable
 static struct pt pt;
 
 // Structure holding the data to be transmitted
 static data_packet_struct data_packet;
+static light_packet_struct light_packet;
 
 // Current time stamp of the node
 unsigned long curr_timestamp;
@@ -51,12 +63,45 @@ unsigned long curr_timestamp;
 // Received time stamp from other node
 unsigned long recv_timestamp;
 
+bool transmit_mode = false;
+
 // sleep cycle
 int sleep_cycle = PRIME_ONE;
 
+// light reading
+int gLightReadings[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int lightIndex = 0;
+
+// helper func
+
+static void init_opt_reading(void);
+static void get_light_reading(void);
+
+static void get_light_reading()
+{
+  int value;
+
+  value = opt_3001_sensor.value(0);
+  if(value != CC26XX_SENSOR_READING_ERROR) {
+    printf("OPT: Light=%d.%02d lux\n", value / 100, value % 100);
+    gLightReadings[lightIndex] = value;
+    lightIndex = (lightIndex + 1) % 10;
+
+  } else {
+    printf("OPT: Light Sensor's Warming Up\n\n");
+  }
+  init_opt_reading();
+}
+
+static void init_opt_reading(void)
+{
+  SENSORS_ACTIVATE(opt_3001_sensor);
+}
+
 // Starts the main contiki neighbour discovery process
 PROCESS(nbr_discovery_process, "cc2650 neighbour discovery process");
-AUTOSTART_PROCESSES(&nbr_discovery_process);
+PROCESS(light_sensor_process, "Light Sensor Process");
+AUTOSTART_PROCESSES(&nbr_discovery_process, &light_sensor_process);
 
 // Function called after reception of a packet
 void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *src, const linkaddr_t *dest)
@@ -64,7 +109,12 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
 
   // Check if the received packet size matches with what we expect it to be
 
-  if (len == sizeof(data_packet))
+  if (transmit_mode) {
+    printf("I am in transmit mode\n");
+    return;
+  }
+
+  if (len == sizeof(data_packet) && transmit_mode == false)
   {
 
     static data_packet_struct received_packet_data;
@@ -73,15 +123,70 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
     memcpy(&received_packet_data, data, len);
 
     // Print the details of the received packet
-    // printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
 
     curr_timestamp = clock_time();
     recv_timestamp = received_packet_data.timestamp;
+
+    // retrieve unsigned long id from packet
+    unsigned long id = received_packet_data.src_id;
+
     printf("Received timestamp: %3lu.%03lu | Own timestamp: %3lu.%03lu\n",
            recv_timestamp / CLOCK_SECOND,
            ((recv_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND,
            curr_timestamp / CLOCK_SECOND,
            ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
+
+    printf("Timestamp: %3lu.%03lu, DETECT %lu\n", 
+      recv_timestamp / CLOCK_SECOND, 
+      ((recv_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND, 
+      id
+    );
+
+    printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
+
+    // is rssi is above -100, change the transmit mode
+    if ((signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI) > -100)
+    {
+      transmit_mode = true;
+    }
+
+    printf("---------------- ");
+  }
+  {
+
+    static data_packet_struct received_packet_data;
+
+    // Copy the content of packet into the data structure
+    memcpy(&received_packet_data, data, len);
+
+    // Print the details of the received packet
+
+    curr_timestamp = clock_time();
+    recv_timestamp = received_packet_data.timestamp;
+
+    // retrieve unsigned long id from packet
+    unsigned long id = received_packet_data.src_id;
+
+    printf("Received timestamp: %3lu.%03lu | Own timestamp: %3lu.%03lu\n",
+           recv_timestamp / CLOCK_SECOND,
+           ((recv_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND,
+           curr_timestamp / CLOCK_SECOND,
+           ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
+
+    printf("Timestamp: %3lu.%03lu, DETECT %lu\n", 
+      recv_timestamp / CLOCK_SECOND, 
+      ((recv_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND, 
+      id
+    );
+
+    printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
+
+    // is rssi is above -100, change the transmit mode
+    if ((signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI) > -100)
+    {
+      transmit_mode = true;
+    }
+
     printf("---------------- ");
   }
 }
@@ -109,10 +214,37 @@ char sender_scheduler(struct rtimer *t, void *ptr)
     // radio on
     NETSTACK_RADIO.on();
 
+    if (transmit_mode) {  
+
+      nullnet_buf = (uint8_t *)&light_packet;
+      nullnet_len = sizeof(light_packet);
+
+      light_packet.seq++;
+
+      curr_timestamp = clock_time();
+
+      light_packet.timestamp = curr_timestamp;
+
+      for (int i = 0; i < 10; i++) {
+        light_packet.lightReadings[i] = gLightReadings[i];
+      }
+
+      NETSTACK_NETWORK.output(&dest_addr);
+
+      // sleep for TIME_SLOT
+      rtimer_set(t, RTIMER_TIME(t) + TIME_SLOT, 1, (rtimer_callback_t)sender_scheduler, ptr);
+      PT_YIELD(&pt); // yield the protothread
+
+      printf("Send light seq# %lu  @ %8lu ticks   %3lu.%03lu\n", light_packet.seq, curr_timestamp, curr_timestamp / CLOCK_SECOND, ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
+      continue;
+    }
+
+
+    printf("I am in neighbour discovery mode\n");
+    
     // send NUM_SEND number of neighbour discovery beacon packets
     for (i = 0; i < NUM_SEND; i++)
     {
-
       // Initialize the nullnet module with information of packet to be trasnmitted
       nullnet_buf = (uint8_t *)&data_packet; // data transmitted
       nullnet_len = sizeof(data_packet);     // length of data transmitted
@@ -129,9 +261,9 @@ char sender_scheduler(struct rtimer *t, void *ptr)
 
       if (i != (NUM_SEND - 1))
       {
-
+        // sleep for TIME_SLOT
         rtimer_set(t, RTIMER_TIME(t) + TIME_SLOT, 1, (rtimer_callback_t)sender_scheduler, ptr);
-        PT_YIELD(&pt);
+        PT_YIELD(&pt); // yield the protothread
       }
     }
 
@@ -173,6 +305,10 @@ PROCESS_THREAD(nbr_discovery_process, ev, data)
   data_packet.src_id = node_id; // Initialize the node ID
   data_packet.seq = 0;          // Initialize the sequence number of the packet
 
+  // initialize light packet
+  light_packet.id = node_id;
+  light_packet.seq = 0;
+
   nullnet_set_input_callback(receive_packet_callback); // initialize receiver callback
   linkaddr_copy(&dest_addr, &linkaddr_null);
 
@@ -181,6 +317,21 @@ PROCESS_THREAD(nbr_discovery_process, ev, data)
 
   // Start sender in one millisecond.
   rtimer_set(&rt, RTIMER_NOW() + (RTIMER_SECOND / 1000), 1, (rtimer_callback_t)sender_scheduler, NULL);
+
+  PROCESS_END();
+}
+
+PROCESS_THREAD(light_sensor_process, ev, data)
+{
+  PROCESS_BEGIN();
+  init_opt_reading();
+
+  while (1)
+  {
+    etimer_set(&et, CLOCK_SECOND);
+    PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
+    get_light_reading();
+  }
 
   PROCESS_END();
 }
