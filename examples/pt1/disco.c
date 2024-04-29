@@ -18,10 +18,10 @@
 #define TIME_SLOT RTIMER_SECOND / 2 // divide time into equal slots, 0.5
 
 // first prime number
-#define PRIME_ONE 3
+#define PRIME_ONE 2
 
 // second prime number
-#define PRIME_TWO 5
+#define PRIME_TWO 3
 
 // For neighbour discovery, we would like to send message to everyone. We use Broadcast address:
 linkaddr_t dest_addr;
@@ -33,8 +33,14 @@ typedef struct
   unsigned long src_id;
   unsigned long timestamp;
   unsigned long seq;
-
 } data_packet_struct;
+
+typedef struct {
+  unsigned long id;
+  unsigned long timestamp;
+  unsigned long seq;
+  int lightReadings[10];
+} light_packet_struct;
 
 // sender timer implemented using rtimer
 static struct rtimer rt;
@@ -44,6 +50,7 @@ static struct pt pt;
 
 // Structure holding the data to be transmitted
 static data_packet_struct data_packet;
+static light_packet_struct light_packet;
 
 // Current time stamp of the node
 unsigned long curr_timestamp;
@@ -52,7 +59,7 @@ unsigned long curr_timestamp;
 unsigned long recv_timestamp;
 
 // sleep cycle
-int sleep_cycle = PRIME_ONE;
+int sleep_cycle = PRIME_TWO;
 
 // Starts the main contiki neighbour discovery process
 PROCESS(nbr_discovery_process, "cc2650 neighbour discovery process");
@@ -61,20 +68,16 @@ AUTOSTART_PROCESSES(&nbr_discovery_process);
 // Function called after reception of a packet
 void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *src, const linkaddr_t *dest)
 {
-
   // Check if the received packet size matches with what we expect it to be
-
   if (len == sizeof(data_packet))
   {
-
     static data_packet_struct received_packet_data;
 
     // Copy the content of packet into the data structure
     memcpy(&received_packet_data, data, len);
 
     // Print the details of the received packet
-    // printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
-
+    unsigned long id = received_packet_data.src_id;
     curr_timestamp = clock_time();
     recv_timestamp = received_packet_data.timestamp;
     printf("Received timestamp: %3lu.%03lu | Own timestamp: %3lu.%03lu\n",
@@ -82,7 +85,32 @@ void receive_packet_callback(const void *data, uint16_t len, const linkaddr_t *s
            ((recv_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND,
            curr_timestamp / CLOCK_SECOND,
            ((curr_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND);
+
+    printf("Timestamp: %3lu.%03lu, DETECT %lu\n", 
+      recv_timestamp / CLOCK_SECOND, 
+      ((recv_timestamp % CLOCK_SECOND) * 1000) / CLOCK_SECOND, 
+      id
+    );
+
+    printf("Received neighbour discovery packet %lu with rssi %d from %ld", received_packet_data.seq, (signed short)packetbuf_attr(PACKETBUF_ATTR_RSSI), received_packet_data.src_id);
     printf("---------------- ");
+  }
+  else if (len == sizeof(light_packet)) {
+    static light_packet_struct received_packet_data;
+
+    // Copy the content of packet into the data structure
+    memcpy(&received_packet_data, data, len);
+
+    printf("Light: ");
+    for (int j = 0; j < 10; j++)
+    {
+      printf("%d.%02d lux", received_packet_data.lightReadings[j] / 100, received_packet_data.lightReadings[j] % 100);
+      if (j != 10 - 1)
+      {
+        printf(", ");
+      }
+    }
+    printf("\n");
   }
 }
 
