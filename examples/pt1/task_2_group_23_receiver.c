@@ -18,10 +18,10 @@
 #define TIME_SLOT RTIMER_SECOND / 2 // divide time into equal slots, 0.5
 
 // first prime number
-#define PRIME_ONE 2
+#define PRIME_ONE 3
 
 // second prime number
-#define PRIME_TWO 3
+#define PRIME_TWO 5
 
 // For neighbour discovery, we would like to send message to everyone. We use Broadcast address:
 linkaddr_t dest_addr;
