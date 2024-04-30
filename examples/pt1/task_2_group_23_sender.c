@@ -36,14 +36,14 @@ typedef struct
   unsigned long timestamp;
   unsigned long seq;
 
-} data_packet_struct;
+} data_packet_struct; // size of this structure is 12 bytes
 
 typedef struct {
   unsigned long id;
   unsigned long timestamp;
   unsigned long seq;
   int lightReadings[10];
-} light_packet_struct;
+} light_packet_struct; // size of this structure is 52 bytes
 
 
 // sender timer implemented using rtimer
